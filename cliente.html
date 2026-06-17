@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pedir Turno — Fila Virtual</title>
+<style>
+  :root {
+    --crema: #F7F3EC;
+    --crema-osc: #ECE5D6;
+    --tinta: #2B2823;
+    --tinta-suave: #6B6459;
+    --naranja: #D6562F;
+    --naranja-osc: #B8431F;
+    --verde: #3A7D44;
+    --borde: #DCD3C0;
+  }
+
+  * { box-sizing: border-box; }
+
+  html, body {
+    margin: 0;
+    padding: 0;
+    background: var(--crema);
+    color: var(--tinta);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    min-height: 100vh;
+  }
+
+  body {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+  }
+
+  .ticket {
+    width: 100%;
+    max-width: 380px;
+    background: #fff;
+    border-radius: 18px;
+    box-shadow: 0 1px 2px rgba(43,40,35,0.04), 0 12px 32px rgba(43,40,35,0.10);
+    overflow: hidden;
+    position: relative;
+  }
+
+  .ticket::before {
+    content: "";
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 6px;
+    background: repeating-linear-gradient(
+      90deg,
+      var(--naranja) 0px, var(--naranja) 10px,
+      transparent 10px, transparent 18px
+    );
+  }
+
+  .ticket-header {
+    padding: 36px 32px 24px;
+    text-align: center;
+    border-bottom: 1px dashed var(--borde);
+  }
+
+  .eyebrow {
+    font-size: 12px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--tinta-suave);
+    font-weight: 600;
+    margin: 0 0 10px;
+  }
+
+  .ticket-header h1 {
+    font-family: "Courier New", Courier, monospace;
+    font-size: 26px;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+    margin: 0 0 8px;
+  }
+
+  .ticket-header p {
+    margin: 0;
+    font-size: 14.5px;
+    color: var(--tinta-suave);
+    line-height: 1.5;
+  }
+
+  form {
+    padding: 28px 32px 32px;
+  }
+
+  .campo {
+    margin-bottom: 18px;
+  }
+
+  label {
+    display: block;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--tinta);
+    margin-bottom: 8px;
+  }
+
+  input {
+    width: 100%;
+    padding: 14px 16px;
+    font-size: 16px;
+    border: 1.5px solid var(--borde);
+    border-radius: 10px;
+    background: var(--crema);
+    color: var(--tinta);
+    font-family: inherit;
+    transition: border-color 0.15s ease;
+  }
+
+  input:focus {
+    outline: none;
+    border-color: var(--naranja);
+    background: #fff;
+  }
+
+  input::placeholder { color: #B5AB97; }
+
+  .hint {
+    font-size: 12.5px;
+    color: var(--tinta-suave);
+    margin-top: 6px;
+  }
+
+  button {
+    width: 100%;
+    padding: 16px;
+    margin-top: 8px;
+    font-size: 16px;
+    font-weight: 700;
+    border: none;
+    border-radius: 10px;
+    background: var(--naranja);
+    color: #fff;
+    cursor: pointer;
+    transition: background 0.15s ease, transform 0.05s ease;
+    font-family: inherit;
+  }
+
+  button:hover { background: var(--naranja-osc); }
+  button:active { transform: scale(0.99); }
+
+  button:disabled {
+    background: #C9BFA9;
+    cursor: not-allowed;
+  }
+
+  .mensaje-error {
+    margin-top: 14px;
+    padding: 12px 14px;
+    background: #FBEAE5;
+    border: 1px solid #EFC2B2;
+    border-radius: 8px;
+    color: var(--naranja-osc);
+    font-size: 13.5px;
+    display: none;
+  }
+
+  /* --- Vista de confirmación --- */
+  .confirmacion {
+    display: none;
+    padding: 40px 32px 36px;
+    text-align: center;
+  }
+
+  .numero-turno {
+    font-family: "Courier New", Courier, monospace;
+    font-size: 72px;
+    font-weight: 700;
+    color: var(--naranja);
+    line-height: 1;
+    margin: 8px 0 4px;
+  }
+
+  .confirmacion .eyebrow-ok {
+    font-size: 12px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--verde);
+    font-weight: 700;
+    margin: 0 0 4px;
+  }
+
+  .confirmacion p.detalle {
+    color: var(--tinta-suave);
+    font-size: 14.5px;
+    line-height: 1.6;
+    margin: 16px 0 0;
+  }
+
+  .confirmacion .nombre-cliente {
+    font-weight: 700;
+    color: var(--tinta);
+  }
+
+  .ticket-footer {
+    text-align: center;
+    padding: 16px 0 0;
+    font-size: 12px;
+    color: #B5AB97;
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .ticket { animation: aparecer 0.4s ease; }
+    @keyframes aparecer {
+      from { opacity: 0; transform: translateY(8px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+  }
+</style>
+</head>
+<body>
+
+  <div class="ticket">
+
+    <!-- Vista 1: Formulario -->
+    <div id="vista-formulario">
+      <div class="ticket-header">
+        <p class="eyebrow">Fila Virtual · Pinto</p>
+        <h1>Pedir Turno</h1>
+        <p>Ingresa tus datos y te avisamos por SMS cuando esté cerca tu turno.</p>
+      </div>
+      <form id="form-turno">
+        <div class="campo">
+          <label for="nombre">Nombre</label>
+          <input type="text" id="nombre" name="nombre" placeholder="Tu nombre" required autocomplete="name">
+        </div>
+        <div class="campo">
+          <label for="telefono">Celular</label>
+          <input type="tel" id="telefono" name="telefono" placeholder="+56 9 1234 5678" required autocomplete="tel">
+          <p class="hint">Incluye el código de país, ej: +569...</p>
+        </div>
+        <button type="submit" id="btn-enviar">Pedir Turno</button>
+        <div class="mensaje-error" id="mensaje-error"></div>
+      </form>
+    </div>
+
+    <!-- Vista 2: Confirmación (oculta hasta que se envía el formulario) -->
+    <div class="confirmacion" id="vista-confirmacion">
+      <p class="eyebrow-ok">✓ Turno confirmado</p>
+      <p class="numero-turno" id="numero-posicion">—</p>
+      <p style="margin:0; font-size:13px; color:var(--tinta-suave); text-transform:uppercase; letter-spacing:0.08em;">lugar en la fila</p>
+      <p class="detalle">
+        Gracias, <span class="nombre-cliente" id="nombre-confirmado"></span>.
+        Te avisaremos por SMS cuando falte poco para tu turno.
+      </p>
+    </div>
+
+    <div class="ticket-footer">Conserva esta pantalla como tu comprobante</div>
+  </div>
+
+<script>
+  // --- CONFIGURACIÓN ---
+  // Cambia esta URL por la de tu servidor (ngrok o Render) cuando despliegues.
+  const API_URL = "http://localhost:8000";
+
+  const form = document.getElementById("form-turno");
+  const btnEnviar = document.getElementById("btn-enviar");
+  const mensajeError = document.getElementById("mensaje-error");
+  const vistaFormulario = document.getElementById("vista-formulario");
+  const vistaConfirmacion = document.getElementById("vista-confirmacion");
+
+  function mostrarError(texto) {
+    mensajeError.textContent = texto;
+    mensajeError.style.display = "block";
+  }
+
+  function ocultarError() {
+    mensajeError.style.display = "none";
+  }
+
+  form.addEventListener("submit", async (evento) => {
+    evento.preventDefault();
+    ocultarError();
+
+    const nombre = document.getElementById("nombre").value.trim();
+    const telefono = document.getElementById("telefono").value.trim();
+
+    if (!nombre || !telefono) {
+      mostrarError("Por favor completa todos los campos.");
+      return;
+    }
+
+    btnEnviar.disabled = true;
+    btnEnviar.textContent = "Enviando...";
+
+    try {
+      const respuesta = await fetch(`${API_URL}/ingresar`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ nombre, telefono })
+      });
+
+      if (!respuesta.ok) {
+        throw new Error("El servidor respondió con un error.");
+      }
+
+      const datos = await respuesta.json();
+
+      // Mostrar la vista de confirmación con el número de posición real.
+      document.getElementById("numero-posicion").textContent = datos.posicion;
+      document.getElementById("nombre-confirmado").textContent = nombre;
+
+      vistaFormulario.style.display = "none";
+      vistaConfirmacion.style.display = "block";
+
+    } catch (error) {
+      console.error(error);
+      mostrarError("No pudimos conectar con el servidor. Intenta de nuevo en un momento.");
+      btnEnviar.disabled = false;
+      btnEnviar.textContent = "Pedir Turno";
+    }
+  });
+</script>
+
+</body>
+</html>

@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Panel Cajero — Fila Virtual</title>
+<style>
+  :root {
+    --crema: #F7F3EC;
+    --tinta: #2B2823;
+    --tinta-suave: #6B6459;
+    --naranja: #D6562F;
+    --naranja-osc: #B8431F;
+    --verde: #3A7D44;
+    --verde-osc: #2E6438;
+    --verde-fondo: #E9F3EA;
+    --ambar: #C9881A;
+    --ambar-fondo: #FBF0DC;
+    --borde: #DCD3C0;
+  }
+
+  * { box-sizing: border-box; }
+
+  html, body {
+    margin: 0;
+    padding: 0;
+    background: var(--crema);
+    color: var(--tinta);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    min-height: 100vh;
+  }
+
+  .contenedor {
+    max-width: 760px;
+    margin: 0 auto;
+    padding: 32px 24px 60px;
+  }
+
+  header {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    margin-bottom: 28px;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .eyebrow {
+    font-size: 12px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--tinta-suave);
+    font-weight: 600;
+    margin: 0 0 4px;
+  }
+
+  header h1 {
+    font-family: "Courier New", Courier, monospace;
+    font-size: 28px;
+    font-weight: 700;
+    margin: 0;
+  }
+
+  .contador {
+    font-size: 14px;
+    color: var(--tinta-suave);
+    font-weight: 600;
+  }
+
+  .contador strong {
+    color: var(--tinta);
+    font-size: 18px;
+  }
+
+  /* --- Botón Siguiente --- */
+  .btn-siguiente {
+    width: 100%;
+    padding: 22px;
+    font-size: 19px;
+    font-weight: 800;
+    letter-spacing: 0.01em;
+    border: none;
+    border-radius: 14px;
+    background: var(--verde);
+    color: #fff;
+    cursor: pointer;
+    transition: background 0.15s ease, transform 0.05s ease;
+    font-family: inherit;
+    margin-bottom: 28px;
+    box-shadow: 0 4px 14px rgba(58,125,68,0.25);
+  }
+
+  .btn-siguiente:hover { background: var(--verde-osc); }
+  .btn-siguiente:active { transform: scale(0.99); }
+
+  .btn-siguiente:disabled {
+    background: #C9BFA9;
+    cursor: not-allowed;
+    box-shadow: none;
+  }
+
+  /* --- Notificación de atención reciente --- */
+  .toast {
+    display: none;
+    padding: 14px 18px;
+    border-radius: 10px;
+    background: var(--verde-fondo);
+    border: 1px solid #C7E0CA;
+    color: var(--verde-osc);
+    font-size: 14px;
+    font-weight: 600;
+    margin-bottom: 20px;
+  }
+
+  /* --- Lista de la fila --- */
+  .lista-fila {
+    background: #fff;
+    border-radius: 16px;
+    border: 1px solid var(--borde);
+    overflow: hidden;
+  }
+
+  .fila-item {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--borde);
+  }
+
+  .fila-item:last-child { border-bottom: none; }
+
+  .posicion {
+    font-family: "Courier New", Courier, monospace;
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--tinta-suave);
+    width: 36px;
+    text-align: center;
+    flex-shrink: 0;
+  }
+
+  .fila-item.proximo .posicion { color: var(--naranja); }
+  .fila-item.alerta .posicion { color: var(--ambar); }
+
+  .info-persona {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .info-persona .nombre {
+    font-weight: 700;
+    font-size: 16px;
+    margin: 0 0 2px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .info-persona .telefono {
+    font-size: 13.5px;
+    color: var(--tinta-suave);
+    margin: 0;
+  }
+
+  .etiqueta {
+    font-size: 11.5px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    padding: 5px 10px;
+    border-radius: 999px;
+    flex-shrink: 0;
+  }
+
+  .etiqueta.proximo {
+    background: #FCE8DF;
+    color: var(--naranja-osc);
+  }
+
+  .etiqueta.alerta {
+    background: var(--ambar-fondo);
+    color: var(--ambar);
+  }
+
+  .fila-vacia {
+    padding: 48px 24px;
+    text-align: center;
+    color: var(--tinta-suave);
+  }
+
+  .fila-vacia .icono {
+    font-size: 32px;
+    margin-bottom: 10px;
+  }
+
+  .fila-vacia p { margin: 0; font-size: 14.5px; }
+
+  .estado-conexion {
+    text-align: center;
+    font-size: 12px;
+    color: #B5AB97;
+    margin-top: 20px;
+  }
+
+  .estado-conexion.error { color: var(--naranja-osc); }
+</style>
+</head>
+<body>
+
+  <div class="contenedor">
+    <header>
+      <div>
+        <p class="eyebrow">Fila Virtual · Pinto</p>
+        <h1>Panel del Cajero</h1>
+      </div>
+      <div class="contador"><strong id="total-esperando">0</strong> esperando</div>
+    </header>
+
+    <div class="toast" id="toast-atendido"></div>
+
+    <button class="btn-siguiente" id="btn-siguiente">Siguiente →</button>
+
+    <div class="lista-fila" id="lista-fila">
+      <!-- Se llena dinámicamente con JavaScript -->
+    </div>
+
+    <p class="estado-conexion" id="estado-conexion">Conectando con el servidor...</p>
+  </div>
+
+<script>
+  // --- CONFIGURACIÓN ---
+  // Cambia esta URL por la de tu servidor (ngrok o Render) cuando despliegues.
+  const API_URL = "http://localhost:8000";
+  const INTERVALO_ACTUALIZACION_MS = 4000; // refresca la fila cada 4 segundos
+
+  const listaFila = document.getElementById("lista-fila");
+  const totalEsperando = document.getElementById("total-esperando");
+  const btnSiguiente = document.getElementById("btn-siguiente");
+  const toast = document.getElementById("toast-atendido");
+  const estadoConexion = document.getElementById("estado-conexion");
+
+  function renderizarFila(fila) {
+    totalEsperando.textContent = fila.length;
+
+    if (fila.length === 0) {
+      listaFila.innerHTML = `
+        <div class="fila-vacia">
+          <div class="icono">🪑</div>
+          <p>No hay nadie esperando en este momento.</p>
+        </div>
+      `;
+      btnSiguiente.disabled = true;
+      return;
+    }
+
+    btnSiguiente.disabled = false;
+
+    listaFila.innerHTML = fila.map((persona, indice) => {
+      const posicion = indice + 1;
+      let claseExtra = "";
+      let etiqueta = "";
+
+      if (posicion === 1) {
+        claseExtra = "proximo";
+        etiqueta = `<span class="etiqueta proximo">Siguiente</span>`;
+      } else if (posicion === 2) {
+        claseExtra = "alerta";
+        etiqueta = `<span class="etiqueta alerta">Avisado por SMS</span>`;
+      }
+
+      return `
+        <div class="fila-item ${claseExtra}">
+          <div class="posicion">${posicion}</div>
+          <div class="info-persona">
+            <p class="nombre">${escaparHTML(persona.nombre)}</p>
+            <p class="telefono">${escaparHTML(persona.telefono)}</p>
+          </div>
+          ${etiqueta}
+        </div>
+      `;
+    }).join("");
+  }
+
+  function escaparHTML(texto) {
+    const div = document.createElement("div");
+    div.textContent = texto;
+    return div.innerHTML;
+  }
+
+  async function actualizarFila() {
+    try {
+      const respuesta = await fetch(`${API_URL}/estado`);
+      if (!respuesta.ok) throw new Error("Respuesta no exitosa");
+
+      const datos = await respuesta.json();
+      renderizarFila(datos.fila);
+
+      estadoConexion.textContent = "";
+      estadoConexion.classList.remove("error");
+    } catch (error) {
+      console.error(error);
+      estadoConexion.textContent = "No se pudo conectar con el servidor. Reintentando...";
+      estadoConexion.classList.add("error");
+    }
+  }
+
+  function mostrarToast(texto) {
+    toast.textContent = texto;
+    toast.style.display = "block";
+    setTimeout(() => { toast.style.display = "none"; }, 5000);
+  }
+
+  btnSiguiente.addEventListener("click", async () => {
+    btnSiguiente.disabled = true;
+    btnSiguiente.textContent = "Atendiendo...";
+
+    try {
+      const respuesta = await fetch(`${API_URL}/atender`, { method: "POST" });
+      const datos = await respuesta.json();
+
+      if (!respuesta.ok) {
+        mostrarToast(datos.detail || "La fila está vacía.");
+      } else {
+        let texto = `✓ Atendido: ${datos.atendido}`;
+        if (datos.alerta_posicion_2) {
+          const sms = datos.alerta_posicion_2.sms;
+          texto += sms.enviado
+            ? ` · SMS enviado a ${datos.alerta_posicion_2.nombre}`
+            : ` · No se pudo enviar SMS a ${datos.alerta_posicion_2.nombre}`;
+        }
+        mostrarToast(texto);
+      }
+
+      await actualizarFila();
+    } catch (error) {
+      console.error(error);
+      mostrarToast("Error al conectar con el servidor.");
+    } finally {
+      btnSiguiente.textContent = "Siguiente →";
+      btnSiguiente.disabled = false;
+    }
+  });
+
+  // Carga inicial + actualización periódica (así el cajero ve en vivo
+  // si entra gente nueva desde el QR, sin tener que recargar la página).
+  actualizarFila();
+  setInterval(actualizarFila, INTERVALO_ACTUALIZACION_MS);
+</script>
+
+</body>
+</html>

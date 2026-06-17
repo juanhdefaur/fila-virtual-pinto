@@ -1,0 +1,6 @@
+.env
+fila_virtual.db
+__pycache__/
+*.pyc
+.venv/
+venv/
