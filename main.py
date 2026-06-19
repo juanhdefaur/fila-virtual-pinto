@@ -159,7 +159,7 @@ def atender_persona():
         resultado_sms = enviar_sms(
             persona_en_alerta["telefono"],
             f"Hola {persona_en_alerta['nombre']}, ¡ya casi es tu turno! "
-            f"Quedan 1 persona(s) antes de ti."
+            f"Quedan 1.5 persona(s) antes de ti."
         )
         alerta_info = {
             "nombre": persona_en_alerta["nombre"],
